@@ -78,7 +78,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: images-folder
-          path: images/
+          path: src/images/
 
   # DESPLEGAR EN S3
   deploy:
