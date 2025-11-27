@@ -1,0 +1,126 @@
+name: PachangApp Despliegue Secuencial en AWS S3
+
+# Disparadores
+on:
+  # Disparador manual
+  workflow_dispatch:
+
+jobs:
+  # PROBAR
+  test:
+    name: 1. Instalar y Probar
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clonar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x' 
+          cache: 'npm' 
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Ejecutar pruebas (npm test)
+        run: npm test
+
+  # CONSTRUIR ARTEFACTOS
+  build:
+    name: 2. Construir Artefactos
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Clonar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x' 
+          cache: 'npm' 
+
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Crear archivo de configuración JSDoc
+        run: |
+          cat <<EOT >> jsdoc.conf.json
+          {
+              "source": {
+                  "include": ["src"], 
+                  "includePattern": ".+\\\\.js(doc|x)?$",
+                  "excludePattern": "(^|\\\\/|\\\\\\\\)_"
+              },
+              "opts": {
+                  "encoding": "utf8",
+                  "destination": "./docs",
+                  "recurse": true
+              }
+          }
+          EOT
+      - name: Generar documentacion
+        run: npm run docs
+
+      - name: Subir artefacto del sitio web
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-site
+          path: src/ 
+
+      - name: Subir artefacto de la documentación
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: docs/
+          
+      - name: Subir artefacto de las imágenes 
+        uses: actions/upload-artifact@v4
+        with:
+          name: images-folder
+          path: images/
+
+  # DESPLEGAR EN S3
+  deploy:
+    name: 3. Desplegar en AWS S3
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Configurar credenciales de AWS
+        uses: aws-actions/configure-aws-credentials@v5.1.0
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Descargar artefacto del sitio web
+        uses: actions/download-artifact@v4
+        with:
+          name: static-site
+          path: ./sitio-web
+
+      - name: Descargar artefacto de la documentación
+        uses: actions/download-artifact@v4
+        with:
+          name: documentation
+          path: ./sitio-docs
+          
+      - name: Descargar artefacto de las imágenes 
+        uses: actions/download-artifact@v4
+        with:
+          name: images-folder
+          path: ./sitio-imagenes
+
+      - name: Desplegar sitio web en S3
+        run: |
+          aws s3 sync ./sitio-web/ s3://${{ secrets.S3_BUCKET_NAME }} --delete
+
+      - name: Desplegar documentación en S3
+        run: |
+          aws s3 sync ./sitio-docs/ s3://${{ secrets.S3_BUCKET_NAME }}/docs --delete
+
+      - name: Desplegar imágenes en S3
+        run: |
+          aws s3 sync ./sitio-imagenes/ s3://${{ secrets.S3_BUCKET_NAME }}/images --delete
