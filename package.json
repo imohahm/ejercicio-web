@@ -1,0 +1,28 @@
+{
+  "name": "ejercicio-web",
+  "version": "1.0.0",
+  "description": "* Creacion de la Estructura base.\r * Rama deploy para probar despliegue",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "jest",
+    "docs": "jsdoc -c jsdoc.conf.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/imohahm/ejercicio-web.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/imohahm/ejercicio-web/issues"
+  },
+  "homepage": "https://github.com/imohahm/ejercicio-web#readme",
+  "dependencies": {
+    "jest": "^30.2.0",
+    "jsdoc": "^4.0.5"
+  }
+}
